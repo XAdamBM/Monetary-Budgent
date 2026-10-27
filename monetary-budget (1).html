@@ -1,0 +1,1036 @@
+<html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MONETARY BUDGET</title>
+    <style>
+        :root {
+            --accent: #10b981;
+            --accent-glow: rgba(16, 185, 129, 0.4);
+            --bg-dark: #09090b;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-main: #ffffff;
+            --text-muted: #71717a;
+            --gold: #fbbf24;
+            --silver: #94a3b8;
+            --bronze: #cd7f32;
+            --error: #ef4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { width: 100%; min-height: 100vh; background-color: var(--bg-dark); color: var(--text-main); font-family: system-ui, sans-serif; overflow-x: hidden; }
+
+        #coinCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        header, main, nav, #login-screen { position: relative; z-index: 10; }
+
+        #login-screen {
+            position: fixed; inset: 0; background: rgba(9, 9, 11, 0.95); backdrop-filter: blur(10px);
+            z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center;
+        }
+        #login-screen.hidden { opacity: 0; pointer-events: none; transition: 0.5s; }
+
+        input[type="radio"] { display: none; }
+        .page-content { display: none; width: 100%; max-width: 500px; margin: 0 auto; padding: 32px 24px 140px 24px; flex-direction: column; gap: 28px; animation: fadeIn 0.3s ease-out; }
+        #tab-home:checked ~ main #home, #tab-videos:checked ~ main #videos, #tab-games:checked ~ main #games, #tab-trophy:checked ~ main #leaderboard, #tab-profile:checked ~ main #profile { display: flex; }
+        #tab-home:checked ~ nav label[for="tab-home"], #tab-videos:checked ~ nav label[for="tab-videos"], #tab-games:checked ~ nav label[for="tab-games"], #tab-trophy:checked ~ nav label[for="tab-trophy"], #tab-profile:checked ~ nav label[for="tab-profile"] { color: var(--accent); background: rgba(16, 185, 129, 0.1); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        header { position: sticky; top: 0; width: 100%; padding: 20px 24px; background: rgba(9, 9, 11, 0.6); backdrop-filter: blur(20px); border-bottom: 1px solid var(--card-border); display: flex; justify-content: space-between; align-items: center; z-index: 100; }
+        .user-pill { display: flex; align-items: center; gap: 12px; }
+        .icon-box { width: 40px; height: 40px; background: #18181b; border-radius: 12px; border: 1px solid var(--card-border); display: grid; place-items: center; }
+        .user-info .label { font-size: 9px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; }
+        .user-info .value { font-size: 13px; font-weight: 800; color: var(--text-main); }
+        .stats-pill { background: var(--accent-glow); padding: 6px 14px; border-radius: 12px; display: flex; align-items: center; gap: 6px; color: var(--accent); font-weight: 800; border: 1px solid rgba(16, 185, 129, 0.2); }
+
+        .hero h1 { font-size: 2.5rem; font-weight: 900; line-height: 0.9; letter-spacing: -2px; margin-bottom: 16px; }
+        .gradient { background: linear-gradient(to right, var(--accent), var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        .league-badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 100px; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 12px; }
+        .bronze { background: rgba(205, 127, 50, 0.2); color: var(--bronze); border: 1px solid var(--bronze); }
+        .silver { background: rgba(148, 163, 184, 0.2); color: var(--silver); border: 1px solid var(--silver); }
+        .gold { background: rgba(251, 191, 36, 0.2); color: var(--gold); border: 1px solid var(--gold); }
+
+        .btn { display: block; width: 100%; padding: 18px; border-radius: 20px; font-weight: 800; text-align: center; text-decoration: none; cursor: pointer; border: none; margin-top: 15px; }
+        .btn-primary { background: #fff; color: #000; }
+
+        .feature-card { background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--card-border); border-radius: 24px; padding: 24px; position: relative; }
+        .card-head { font-size: 10px; font-weight: 800; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; }
+        
+        .locked-card { opacity: 0.4; filter: grayscale(1); pointer-events: none; }
+        .lock-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; background: rgba(0,0,0,0.5); border-radius: 24px; }
+
+        .progress-track { width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-top: 15px; }
+        .progress-bar { height: 100%; background: var(--accent); border-radius: 10px; transition: width 0.5s ease; }
+
+        .video-container { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 20px; margin-top: 15px; overflow: hidden; position: relative; border: 1px solid var(--card-border); }
+        video { width: 100%; height: 100%; object-fit: contain; }
+
+        .quiz-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.95); display: none; flex-direction: column; padding: 20px; z-index: 50; justify-content: center; }
+        .quiz-overlay.active { display: flex; }
+        .quiz-question { font-size: 1.1rem; font-weight: 800; color: #fff; margin-bottom: 15px; text-align: center; }
+        .quiz-options { display: flex; flex-direction: column; gap: 10px; }
+        .option-btn { padding: 14px; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--card-border); border-radius: 16px; color: #fff; cursor: pointer; font-weight: 700; text-align: left; }
+        .option-btn.correct { background: var(--accent); color: #000; }
+        .option-btn.incorrect { background: var(--error); }
+
+        .rank-item { display: flex; align-items: center; justify-content: space-between; background: var(--card-bg); padding: 16px; border-radius: 16px; margin-bottom: 8px; }
+        .rank-item.me { border: 1px solid var(--accent); background: rgba(16, 185, 129, 0.1); }
+
+        nav { position: fixed; bottom: 20px; left: 20px; right: 20px; height: 70px; background: rgba(20, 20, 23, 0.8); backdrop-filter: blur(20px); border: 1px solid var(--card-border); border-radius: 24px; display: flex; justify-content: space-around; align-items: center; z-index: 1000; }
+        .nav-item { color: var(--text-muted); padding: 10px; border-radius: 15px; cursor: pointer; }
+        svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.5; }
+
+        /* --- Perfil (estilo Duolingo) --- */
+        .profile-header-card { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+        .avatar-circle { width: 92px; height: 92px; border-radius: 50%; background: #18181b; border: 3px solid var(--accent); display: grid; place-items: center; font-size: 2.6rem; box-shadow: 0 0 25px var(--accent-glow); }
+        .avatar-grid { display: none; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 14px; }
+        .avatar-grid.open { display: flex; }
+        .avatar-option { width: 52px; height: 52px; border-radius: 50%; background: #18181b; border: 2px solid var(--card-border); display: grid; place-items: center; font-size: 1.6rem; cursor: pointer; transition: 0.2s; }
+        .avatar-option:hover { border-color: var(--accent); transform: scale(1.08); }
+        .avatar-option.selected { border-color: var(--accent); background: rgba(16, 185, 129, 0.15); }
+        .btn-small { display: inline-block; width: auto; padding: 10px 20px; font-size: 0.8rem; margin-top: 12px; border-radius: 14px; }
+        .streak-row { display: flex; align-items: center; gap: 14px; }
+        .streak-flame { font-size: 2.2rem; filter: drop-shadow(0 0 8px rgba(251, 146, 60, 0.6)); }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .stat-mini { padding: 18px; }
+        .stat-mini .card-head { margin-bottom: 6px; }
+        .stat-mini .value { font-size: 1.4rem; }
+        .profile-input { width: 100%; padding: 14px; border-radius: 14px; background: var(--card-bg); border: 1px solid var(--card-border); color: #fff; margin-top: 10px; outline: none; font-weight: 700; }
+        .btn-danger { background: transparent; border: 1px solid var(--error) !important; color: var(--error); }
+
+        #mb-toast {
+            position: fixed; top: 16px; left: 50%; z-index: 5000;
+            background: var(--accent); color: #052e21; font-weight: 800;
+            padding: 14px 22px; border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(16,185,129,0.4);
+            opacity: 0; transform: translateX(-50%) translateY(-120px);
+            transition: all 0.4s ease; text-align: center; max-width: 90%;
+        }
+        #mb-toast.mb-toast-visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+    </style>
+</head>
+<body>
+
+    <canvas id="coinCanvas"></canvas>
+
+    <div id="login-screen">
+        <div class="hero">
+            <h1>Monetary <br> <span class="gradient">Budget</span></h1>
+            <p style="margin-bottom: 40px; color: var(--text-muted);">Aprende finanzas jugando.</p>
+        </div>
+        <div style="width: 100%; max-width: 300px;">
+            <input type="text" id="username-input" placeholder="Tu nombre" style="width: 100%; padding: 15px; border-radius: 12px; background: var(--card-bg); border: 1px solid var(--card-border); color: #fff; margin-bottom: 10px; text-align: center; outline: none;">
+            <input type="email" id="email-input" placeholder="Correo (ej: tucorreo@gmail.com)" style="width: 100%; padding: 15px; border-radius: 12px; background: var(--card-bg); border: 1px solid var(--card-border); color: #fff; margin-bottom: 10px; text-align: center; outline: none;">
+            <input type="password" id="password-input" placeholder="Contraseña" style="width: 100%; padding: 15px; border-radius: 12px; background: var(--card-bg); border: 1px solid var(--card-border); color: #fff; margin-bottom: 10px; text-align: center; outline: none;">
+            <p id="login-error" style="color: var(--error); font-size: 0.75rem; min-height: 16px; margin-bottom: 4px;"></p>
+            <button class="btn btn-primary" id="login-btn" onclick="handleLogin()">Entrar / Crear cuenta</button>
+            <p style="font-size: 0.65rem; color: var(--text-muted); margin-top: 12px; line-height: 1.4;">Si el correo ya está registrado, iniciarás sesión con tu contraseña. Si es nuevo, se creará una cuenta y tu progreso se guardará automáticamente.</p>
+        </div>
+    </div>
+
+    <div id="delete-confirm-screen" style="position: fixed; inset: 0; background: rgba(9, 9, 11, 0.95); backdrop-filter: blur(10px); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 40px; text-align: center;">
+        <div style="width: 100%; max-width: 320px;">
+            <div style="font-size: 3rem; margin-bottom: 10px;">⚠️</div>
+            <h1 style="font-size: 1.5rem; font-weight: 900; margin-bottom: 10px;">¿Eliminar cuenta?</h1>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 24px; line-height: 1.4;">Perderás tu progreso, monedas y racha para siempre. Escribe <b>ELIMINAR</b> para confirmar.</p>
+            <input type="text" id="delete-confirm-input" placeholder="ELIMINAR" style="width: 100%; padding: 15px; border-radius: 12px; background: var(--card-bg); border: 1px solid var(--error); color: #fff; margin-bottom: 10px; text-align: center; outline: none; text-transform: uppercase;">
+            <p id="delete-confirm-error" style="color: var(--error); font-size: 0.75rem; min-height: 16px; margin-bottom: 4px;"></p>
+            <button class="btn" style="background: var(--error); color: #fff;" onclick="deleteAccount()">Sí, eliminar mi cuenta</button>
+            <button class="btn" style="background: transparent; border: 1px solid var(--card-border); color: var(--text-main);" onclick="cancelDeleteAccount()">Cancelar</button>
+        </div>
+    </div>
+
+    <input type="radio" name="nav" id="tab-home" checked>
+    <input type="radio" name="nav" id="tab-videos">
+    <input type="radio" name="nav" id="tab-games">
+    <input type="radio" name="nav" id="tab-trophy">
+    <input type="radio" name="nav" id="tab-profile">
+
+    <header>
+        <label for="tab-profile" class="user-pill" style="cursor:pointer;">
+            <div class="icon-box" id="header-avatar-box" style="font-size:1.3rem;">🙂</div>
+            <div class="user-info">
+                <p class="label" id="league-text">Bronce</p>
+                <p class="value" id="display-name">Usuario</p>
+            </div>
+        </label>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <div class="stats-pill"><span id="coin-count">🪙 0</span></div>
+            <button onclick="handleLogout()" title="Cerrar sesión" style="background:transparent; border:1px solid var(--card-border); color:var(--text-muted); border-radius:12px; padding:8px 10px; cursor:pointer; font-size:11px; font-weight:800;">Salir</button>
+        </div>
+    </header>
+
+    <main>
+        <section id="home" class="page-content">
+            <div class="hero">
+                <div id="league-badge-main" class="league-badge bronze">Liga Bronce</div>
+                <h1>HOLA, <br> <span class="gradient" id="welcome-name">USUARIO</span></h1>
+                <p>Tu viaje financiero comienza aquí.</p>
+            </div>
+            <div class="feature-card">
+                <div class="card-head">Tu Progreso</div>
+                <div class="progress-track"><div class="progress-bar" id="main-progress" style="width: 0%;"></div></div>
+                <p style="margin-top: 10px; font-size: 0.8rem;" id="progress-text">0% completado</p>
+            </div>
+            <label for="tab-videos" class="btn btn-primary">Continuar Lección</label>
+        </section>
+
+        <section id="videos" class="page-content">
+            <div class="hero"><h1>VIDEOS <br> <span class="gradient">INTERACTIVOS</span></h1></div>
+
+            <div class="feature-card" id="card-l1">
+                <div class="card-head">Lección 1: HISTORIA DEL DINERO</div>
+                <div class="video-container">
+                    <video id="v1" controls disablePictureInPicture controlsList="nodownload"><source src="Historia del DINERO.mp4" type="video/mp4"></video>
+                    <div id="quiz-1" class="quiz-overlay"><p class="quiz-question" id="q-text-1"></p><div class="quiz-options" id="opt-1"></div></div>
+                </div>
+            </div>
+
+                        <div class="feature-card locked-card" id="card-l2">
+                <div id="lock-msg-2" class="lock-overlay"><span>🔒 Completa la Lección 1</span></div>
+                <div class="card-head">Lección 2: que es y como funciona el dinero</div>
+                <div class="video-container">
+                    <video id="v2" controls disablePictureInPicture controlsList="nodownload"><source src="QUE ES DINERO Y COMO FUNCIONA.mp4" type="video/mp4"></video>
+                    <div id="quiz-2" class="quiz-overlay"><p class="quiz-question" id="q-text-2"></p><div class="quiz-options" id="opt-2"></div></div>
+                </div>
+            </div>
+
+                        <div class="feature-card locked-card" id="card-l3">
+                <div id="lock-msg-3" class="lock-overlay"><span>🔒 Completa la Lección 2</span></div>
+                <div class="card-head">Lección 3: ¿CÓMO FUNCIONA EL DINERO?</div>
+                <div class="video-container">
+                    <video id="v3" controls disablePictureInPicture controlsList="nodownload"><source src="videoplayback.mp4" type="video/mp4"></video>
+                    <div id="quiz-3" class="quiz-overlay"><p class="quiz-question" id="q-text-3"></p><div class="quiz-options" id="opt-3"></div></div>
+                </div>
+            </div>
+
+                        <div class="feature-card locked-card" id="card-l4">
+                <div id="lock-msg-4" class="lock-overlay"><span>🔒 Completa la Lección 3</span></div>
+                <div class="card-head">Lección 4: NECESIDADES Y DESEOS</div>
+                <div class="video-container">
+                    <video id="v4" controls disablePictureInPicture controlsList="nodownload"><source src="NECESIDADES vs. DESEOS.mp4" type="video/mp4"></video>
+                    <div id="quiz-4" class="quiz-overlay"><p class="quiz-question" id="q-text-4"></p><div class="quiz-options" id="opt-4"></div></div>
+                </div>
+            </div>
+
+                        <div class="feature-card locked-card" id="card-l5">
+                <div id="lock-msg-5" class="lock-overlay"><span>🔒 Completa la Lección 4</span></div>
+                <div class="card-head">Lección 5: ¿Como ahorrar el dinero?</div>
+                <div class="video-container">
+                    <video id="v5" controls disablePictureInPicture controlsList="nodownload"><source src="Cómo Ahorrar Dinero aunque Ganes Poco  5 Hábitos PRÁCTICOS para Ahorrar Dinero.mp4" type="video/mp4"></video>
+                    <div id="quiz-5" class="quiz-overlay"><p class="quiz-question" id="q-text-5"></p><div class="quiz-options" id="opt-5"></div></div>
+                </div>
+            </div>
+
+                        <div class="feature-card locked-card" id="card-l6">
+                <div id="lock-msg-6" class="lock-overlay"><span>🔒 Completa la Lección 5</span></div>
+                <div class="card-head">Lección 6: ¿Como gastar el dinero?</div>
+                <div class="video-container">
+                    <video id="v6" controls disablePictureInPicture controlsList="nodownload"><source src="Aprende a administrar MEJOR tu dinero con La REGLA de los 6 Frascos.mp4" type="video/mp4"></video>
+                    <div id="quiz-6" class="quiz-overlay"><p class="quiz-question" id="q-text-6"></p><div class="quiz-options" id="opt-6"></div></div>
+                </div>
+            </div>
+
+                     <div class="feature-card locked-card" id="card-l7">
+                <div id="lock-msg-7" class="lock-overlay"><span>🔒 Completa la Lección 6</span></div>
+                <div class="card-head">Lección 7: SISTEMA DE AHORRO</div>
+                <div class="video-container">
+                    <video id="v7" controls disablePictureInPicture controlsList="nodownload"><source src="la mejor manera de administraer.mp4" type="video/mp4"></video>
+                    <div id="quiz-7" class="quiz-overlay"><p class="quiz-question" id="q-text-7"></p><div class="quiz-options" id="opt-7"></div></div>
+                </div>
+            </div>
+
+                     <div class="feature-card locked-card" id="card-l8">
+                <div id="lock-msg-8" class="lock-overlay"><span>🔒 Completa la Lección 7</span></div>
+                <div class="card-head">Lección 8: ¿Como ganar dinero?</div>
+                <div class="video-container">
+                    <video id="v8" controls disablePictureInPicture controlsList="nodownload"><source src="Como ganar dinero siendo menor de edad (12-17 años).mp4" type="video/mp4"></video>
+                    <div id="quiz-8" class="quiz-overlay"><p class="quiz-question" id="q-text-8"></p><div class="quiz-options" id="opt-8"></div></div>
+                </div>
+            </div>
+
+        </section>
+
+        <section id="games" class="page-content">
+            <div class="hero"><h1>JUEGOS <br> <span class="gradient">:3</span></h1></div>
+        </section>
+
+<section id="games" class="page-content">
+    <a href="ahorcado.html" class="game-card-link">
+        <div class="feature-card">
+            <div class="card-head">Juego: Ahorcado del Dinero</div>
+            
+            <img src="ahogo.png" 
+                 alt="Juego Ahorcado"
+                 class="game-img">
+
+            <p style="margin-top:10px; color: var(--text-muted);">
+                Adivina palabras sobre el origen del dinero
+            </p>
+        </div>
+    </a>
+</section>
+<style>.game-card-link{
+text-decoration:none;
+color:inherit;
+}
+
+.game-img{
+width:100%;
+border-radius:16px;
+margin-top:10px;
+transition:0.3s;
+cursor:pointer;
+}
+
+.game-img:hover{
+transform:scale(1.02);
+}</style>
+
+<section id="games" class="page-content">
+    <a href="sopa de letras.html" class="game-card-link">
+        <div class="feature-card">
+            <div class="card-head">Juego: Sopa de letras</div>
+            
+            <img src="sopa.jpg" 
+                 alt="Juego Sopa de letras"
+                 class="game-img">
+
+            <p style="margin-top:10px; color: var(--text-muted);">
+                Busca palabras para completar toda la sopa de letras
+            </p>
+        </div>
+    </a>
+</section>
+<style>.game-card-link{
+text-decoration:none;
+color:inherit;
+}
+
+.game-img{
+width:100%;
+border-radius:16px;
+margin-top:10px;
+transition:0.3s;
+cursor:pointer;
+}
+
+.game-img:hover{
+transform:scale(1.02);
+}</style>
+
+<section id="games" class="page-content">
+    <a href="memoria de palabras.html" class="game-card-link">
+        <div class="feature-card">
+            <div class="card-head">Juego: memoria de palabras</div>
+            
+            <img src="memory.jpg" 
+                 alt="Juego memoria de palabras"
+                 class="game-img">
+
+            <p style="margin-top:10px; color: var(--text-muted);">
+                Adivina las cartas que coincidan
+            </p>
+        </div>
+    </a>
+</section>
+<style>.game-card-link{
+text-decoration:none;
+color:inherit;
+}
+
+.game-img{
+width:100%;
+border-radius:16px;
+margin-top:10px;
+transition:0.3s;
+cursor:pointer;
+}
+
+.game-img:hover{
+transform:scale(1.02);
+}</style>
+
+<section id="games" class="page-content">
+    <a href="Breakout.html" class="game-card-link">
+        <div class="feature-card">
+            <div class="card-head">Juego:  Breakout</div>
+            
+            <img src=" Breakout.jpg" 
+                 alt="Juego  Breakout"
+                 class="game-img">
+
+            <p style="margin-top:10px; color: var(--text-muted);">
+                Rompe todas las palabras 
+            </p>
+        </div>
+    </a>
+</section>
+
+<section id="games" class="page-content">
+    <a href="buscaminas.html" class="game-card-link">
+        <div class="feature-card">
+            <div class="card-head">Juego: Buscaminas Financiero</div>
+ 
+             <img src="pablito.jpg" 
+                 alt="Juego  Buscaminas"
+                 class="game-img">
+ 
+            <p style="margin-top:10px; color: var(--text-muted);">
+                Descubre las casillas seguras y evita caer en las trampas del dinero
+            </p>
+        </div>
+    </a>
+</section>
+
+<style>.game-card-link{
+text-decoration:none;
+color:inherit;
+}
+
+.game-img{
+width:100%;
+border-radius:16px;
+margin-top:10px;
+transition:0.3s;
+cursor:pointer;
+}
+
+.game-img:hover{
+transform:scale(1.02);
+}</style>
+
+
+        <section id="leaderboard" class="page-content">
+            <div class="hero"><h1>RANKING <br> <span class="gradient">GLOBAL</span></h1></div>
+            <div id="global-rank-list"></div>
+        </section>
+
+        <section id="profile" class="page-content">
+            <div class="hero"><h1>MI <br> <span class="gradient">PERFIL</span></h1></div>
+
+            <div class="feature-card profile-header-card">
+                <div class="avatar-circle" id="profile-avatar-display">🙂</div>
+                <div>
+                    <p class="value" id="profile-name-display" style="font-size:1.3rem;">Usuario</p>
+                    <p class="label" id="profile-league-display">LIGA BRONCE</p>
+                </div>
+                <button class="btn btn-primary btn-small" onclick="toggleAvatarPicker()">Elegir avatar</button>
+                <div class="avatar-grid" id="avatar-grid"></div>
+            </div>
+
+            <div class="feature-card">
+                <div class="card-head">Racha de aprendizaje</div>
+                <div class="streak-row">
+                    <span class="streak-flame">🔥</span>
+                    <div>
+                        <p class="value" id="streak-count" style="font-size:1.6rem;">0</p>
+                        <p class="label">días consecutivos entrando a estudiar</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-grid">
+                <div class="feature-card stat-mini">
+                    <div class="card-head">🪙 Monedas</div>
+                    <p class="value" id="stat-coins">0</p>
+                </div>
+                <div class="feature-card stat-mini">
+                    <div class="card-head">📚 Lecciones</div>
+                    <p class="value" id="stat-lessons">0/8</p>
+                </div>
+                <div class="feature-card stat-mini">
+                    <div class="card-head">✅ Precisión</div>
+                    <p class="value" id="stat-accuracy">0%</p>
+                </div>
+                <div class="feature-card stat-mini">
+                    <div class="card-head">🏆 Liga</div>
+                    <p class="value" id="stat-league">Bronce</p>
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="card-head">Editar nombre</div>
+                <input type="text" id="profile-name-input" class="profile-input" placeholder="Escribe tu nuevo nombre">
+                <button class="btn btn-primary" onclick="updateProfileName()">Guardar cambios</button>
+            </div>
+
+            <button class="btn btn-danger" onclick="handleLogout()">Cerrar sesión</button>
+
+            <div class="feature-card" style="border-color: rgba(239,68,68,0.35);">
+                <div class="card-head" style="color: var(--error);">Zona de peligro</div>
+                <p style="font-size:0.8rem; color: var(--text-muted); margin-top:6px;">Esto borrará tu cuenta, tu progreso, monedas y racha de forma permanente. No se puede deshacer.</p>
+                <button class="btn btn-danger" style="margin-top:16px;" onclick="confirmDeleteAccount()">Eliminar cuenta</button>
+            </div>
+        </section>
+    </main>
+
+    <nav>
+        <label for="tab-home" class="nav-item"><svg viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg></label>
+        <label for="tab-videos" class="nav-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M10 8l6 4-6 4V8z"></path></svg></label>
+        <label for="tab-games" class="nav-item"><svg viewBox="0 0 24 24"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></label>
+        <label for="tab-trophy" class="nav-item"><svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg></label>
+        <label for="tab-profile" class="nav-item"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></label>
+    </nav>
+
+    <script>
+
+        const coinCanvas = document.getElementById('coinCanvas');
+        const coinCtx = coinCanvas.getContext('2d');
+        let cw, ch, coinsList = [];
+        class RainCoin {
+            constructor() { this.reset(); this.y = Math.random() * ch; }
+            reset() { this.x = Math.random() * cw; this.y = -20; this.size = Math.random() * 8 + 5; this.speed = Math.random() * 2 + 1; this.rot = Math.random() * Math.PI * 2; this.rotSpeed = Math.random() * 0.1 + 0.05; this.op = Math.random() * 0.3 + 0.2; }
+            update() { this.y += this.speed; this.rot += this.rotSpeed; if (this.y > ch + 20) this.reset(); }
+            draw() { const flip = Math.cos(this.rot); coinCtx.save(); coinCtx.translate(this.x, this.y); coinCtx.scale(flip, 1); coinCtx.globalAlpha = this.op; coinCtx.beginPath(); coinCtx.arc(0, 0, this.size, 0, Math.PI * 2); coinCtx.fillStyle = '#fbbf24'; coinCtx.fill(); coinCtx.restore(); }
+        }
+        function setupCanvas() { cw = window.innerWidth; ch = window.innerHeight; coinCanvas.width = cw; coinCanvas.height = ch; coinsList = Array.from({length: 35}, () => new RainCoin()); }
+        function animateCanvas() { coinCtx.clearRect(0, 0, cw, ch); coinsList.forEach(c => { c.update(); c.draw(); }); requestAnimationFrame(animateCanvas); }
+        setupCanvas(); animateCanvas(); window.addEventListener('resize', setupCanvas);
+
+        let userCoins = 0, quizzesPassed = 0, userName = "Usuario";
+        let userAvatar, userStreak = 0, totalAttempts = 0, totalCorrect = 0;
+        const DEFAULT_AVATAR = "🙂";
+        const AVATARS = ["🙂","😎","🤓","🦊","🐼","🐸","🦉","🐯","🦁","🐵","🐨","🐙","🦄","🐝","🦖","👑","🧠","💰","🚀","⭐"];
+        userAvatar = DEFAULT_AVATAR;
+
+const quizData = {
+
+v1: [
+{ time: 55, q: "¿Qué utilizaban las personas antes del dinero?", opt: ["Tarjetas bancarias","Trueque","Billetes modernos"], cor: 1, shown: false },
+{ time: 120, q: "¿Cuál era uno de los problemas del trueque?", opt: ["No siempre había intercambios justos","Existían demasiadas monedas","El dinero perdía valor"], cor: 0, shown: false },
+{ time: 185, q: "¿Qué comenzaron a usar algunas civilizaciones como dinero?", opt: ["Celulares","Videojuegos","Objetos valiosos como sal y metales"], cor: 2, shown: false },
+{ time: 260, q: "¿Por qué el oro y la plata fueron importantes?", opt: ["Porque eran fáciles de romper","Porque eran valiosos y duraderos","Porque no tenían valor"], cor: 1, shown: false },
+{ time: 420, q: "¿Qué enseñanza deja el video sobre el dinero?", opt: ["Gastar sin pensar","Ahorrar y administrar correctamente","Guardar todo sin usarlo"], cor: 1, shown: false }
+],
+
+v2: [
+{ time: 40, q: "¿Cuál es la función principal del dinero?", opt: ["Servir para intercambiar bienes y servicios","Solo decorar","Guardar papeles"], cor: 0, shown: false },
+{ time: 85, q: "¿Qué permite hacer el dinero más fácilmente?", opt: ["Evitar compras","Intercambiar productos y servicios","Eliminar necesidades"], cor: 1, shown: false },
+{ time: 130, q: "¿Por qué el dinero facilita el comercio?", opt: ["Porque evita el intercambio directo","Porque elimina los productos","Porque reemplaza las personas"], cor: 0, shown: false },
+{ time: 170, q: "¿Qué característica debe tener el dinero?", opt: ["Ser aceptado por las personas","Ser invisible","No tener valor"], cor: 0, shown: false },
+{ time: 215, q: "¿Qué sucede si administramos bien el dinero?", opt: ["Podemos cubrir necesidades y ahorrar","Perdemos todo el dinero","No necesitamos trabajar"], cor: 0, shown: false }
+],
+
+v3: [
+{ time: 50, q: "¿Qué representa el dinero en la economía?", opt: ["Un medio de intercambio","Un juguete","Un objeto sin utilidad"], cor: 0, shown: false },
+{ time: 95, q: "¿Qué problema ayuda a resolver el dinero?", opt: ["La necesidad del trueque","La existencia de productos","La creación de mercados"], cor: 0, shown: false },
+{ time: 140, q: "¿Cuál es una ventaja de usar dinero?", opt: ["Hace más rápido el comercio","Elimina los productos","Evita las compras"], cor: 0, shown: false },
+{ time: 180, q: "¿Qué ocurre cuando pedimos un crédito?", opt: ["Debemos devolver más dinero","Nos regalan dinero","No hay que pagar"], cor: 0, shown: false },
+{ time: 220, q: "¿Por qué el dinero es importante para la sociedad?", opt: ["Porque facilita compras y ventas","Porque reemplaza el trabajo","Porque elimina necesidades"], cor: 0, shown: false }
+],
+
+v4: [
+{ time: 70, q: "¿Qué es una necesidad?", opt: ["Algo indispensable para vivir","Algo que solo queremos","Un lujo"], cor: 0, shown: false },
+{ time: 145, q: "¿Cuál es un ejemplo de deseo?", opt: ["Comprar comida","Comprar el último celular","Pagar servicios básicos"], cor: 1, shown: false },
+{ time: 240, q: "¿Qué pasa si confundimos deseos con necesidades?", opt: ["Gastamos más dinero innecesariamente","Ahorramos más","Ganamos más dinero"], cor: 0, shown: false },
+{ time: 340, q: "¿Por qué es importante hacer un presupuesto?", opt: ["Para controlar gastos","Para gastar más","Para comprar sin límites"], cor: 0, shown: false },
+{ time: 410, q: "¿Qué enseñanza deja el video?", opt: ["Diferenciar necesidades de deseos","Comprar todo lo que queramos","Gastar sin pensar"], cor: 0, shown: false }
+],
+
+v5: [
+{ time: 35, q: "¿Qué significa ahorrar?", opt: ["Guardar dinero para el futuro","Gastar todo el dinero","Pedir dinero prestado"], cor: 0, shown: false },
+{ time: 75, q: "¿Qué hábito ayuda a ahorrar más?", opt: ["Comprar impulsivamente","Controlar gastos innecesarios","Gastar sin revisar precios"], cor: 1, shown: false },
+{ time: 120, q: "¿Qué ayuda a organizar mejor el dinero?", opt: ["Hacer un presupuesto","Comprar más cosas","No revisar gastos"], cor: 0, shown: false },
+{ time: 165, q: "¿Por qué es importante ahorrar?", opt: ["Para emergencias y metas","Para gastar más rápido","Para no trabajar"], cor: 0, shown: false },
+{ time: 205, q: "¿Cuál es una buena decisión financiera?", opt: ["Ahorrar constantemente","Gastar todo el salario","Comprar sin planear"], cor: 0, shown: false }
+],
+
+v6: [
+{ time: 25, q: "¿Qué enseña la regla de los frascos?", opt: ["A organizar el dinero","A gastar todo","A no ahorrar"], cor: 0, shown: false },
+{ time: 50, q: "¿Por qué es importante dividir el dinero?", opt: ["Para controlar gastos y ahorro","Para perder dinero","Para comprar más cosas"], cor: 0, shown: false },
+{ time: 80, q: "¿Qué debe incluir un buen manejo del dinero?", opt: ["Ahorro e inversión","Solo compras","Gastos impulsivos"], cor: 0, shown: false },
+{ time: 110, q: "¿Qué ocurre si gastamos sin control?", opt: ["Podemos tener problemas financieros","Ganamos más dinero","Ahorramos automáticamente"], cor: 0, shown: false }
+],
+
+v7: [
+{ time: 5, q: "¿Qué recomienda el video para administrar mejor el dinero?", opt: ["Ahorrar una parte de los ingresos","Gastar todo rápidamente","Comprar sin planear"], cor: 0, shown: false }, 
+{ time: 10, q: "¿Por qué es importante tener un sistema de ahorro?", opt: ["Para organizar mejor el dinero","Para gastar más dinero","Para evitar trabajar"], cor: 0, shown: false }, 
+{ time: 15, q: "¿Qué puede ayudarte a cumplir metas financieras?", opt: ["Ahorrar constantemente","Gastar impulsivamente","Pedir dinero siempre"], cor: 0, shown: false }, 
+{ time: 20, q: "¿Qué enseñanza principal deja el video?", opt: ["Administrar y ahorrar inteligentemente","Comprar todo inmediatamente","No controlar gastos"], cor: 0, shown: false }],
+
+v8: [
+{ time: 60, q: "¿Qué es importante para empezar a ganar dinero?", opt: ["Resolver necesidades de otras personas","Esperar dinero gratis","No hacer nada"], cor: 0, shown: false },
+{ time: 140, q: "¿Qué ejemplo muestra el video para generar ingresos?", opt: ["Vender productos o servicios","Dormir más","Gastar dinero"], cor: 0, shown: false },
+{ time: 250, q: "¿Qué habilidad ayuda a ganar más dinero?", opt: ["La creatividad","La pereza","No aprender nada"], cor: 0, shown: false },
+{ time: 360, q: "¿Qué valor tiene el trabajo constante?", opt: ["Ayuda a generar ingresos","Hace perder dinero","No sirve para nada"], cor: 0, shown: false },
+{ time: 455, q: "¿Qué enseñanza deja el video?", opt: ["Buscar oportunidades para generar ingresos","Esperar dinero fácil","No administrar el dinero"], cor: 0, shown: false }
+],
+
+v9: [
+{ time: 30, q: "PREGUNTA PENDIENTE 1 (edítame)", opt: ["Opción A","Opción B","Opción C"], cor: 0, shown: false },
+{ time: 90, q: "PREGUNTA PENDIENTE 2 (edítame)", opt: ["Opción A","Opción B","Opción C"], cor: 0, shown: false },
+{ time: 150, q: "PREGUNTA PENDIENTE 3 (edítame)", opt: ["Opción A","Opción B","Opción C"], cor: 0, shown: false }
+]
+};
+function checkQuiz(video, list, overlay, qText, optCont) {
+
+    const current = Math.floor(video.currentTime);
+
+    const quiz = list.find(q =>
+        current >= q.time &&
+        current <= q.time + 1 &&
+        !q.shown
+    );
+
+    if(quiz){
+
+        quiz.shown = true;
+        video.pause();
+        overlay.classList.add('active');
+        qText.innerText = quiz.q;
+        optCont.innerHTML = '';
+        quiz.opt.forEach((o, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = o;
+            btn.onclick = () => {
+                document.querySelectorAll('.option-btn')
+                .forEach(b => b.disabled = true);
+                totalAttempts++;
+                if(i === quiz.cor){
+                    btn.classList.add('correct');
+                    userCoins += 5;
+                    totalCorrect++;
+                } else {
+                    btn.classList.add('incorrect');
+                }
+                updateUI();
+                saveProgress();
+                setTimeout(() => {
+                    overlay.classList.remove('active');
+                    video.play();
+                    checkUnlocks();
+                    saveProgress();
+                }, 1200);
+            };
+            optCont.appendChild(btn);
+        });
+    }
+}
+
+        let currentEmail = null;
+        const lockMap = { 'card-l2':'lock-msg-2', 'card-l3':'lock-msg-3', 'card-l4':'lock-msg-4', 'card-l5':'lock-msg-5', 'card-l6':'lock-msg-6', 'card-l7':'lock-msg-7', 'card-l8':'lock-msg-8', 'card-l9':'lock-msg-9' };
+        const USERS_KEY = 'mb_users';
+        const SESSION_KEY = 'mb_session_email';
+        const REWARD_KEY = 'mb_pending_reward';
+
+        function loadUsers() {
+            try {
+                const raw = localStorage.getItem(USERS_KEY);
+                return raw ? JSON.parse(raw) : {};
+            } catch (e) {
+                console.error('No se pudo leer localStorage:', e);
+                return {};
+            }
+        }
+
+        function saveUsers(users) {
+            try {
+                localStorage.setItem(USERS_KEY, JSON.stringify(users));
+                return true;
+            } catch (e) {
+                console.error('No se pudo escribir en localStorage:', e);
+                return false;
+            }
+        }
+
+        function showToast(text) {
+            let toast = document.getElementById('mb-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'mb-toast';
+                document.body.appendChild(toast);
+            }
+            toast.innerText = text;
+            toast.classList.add('mb-toast-visible');
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => { toast.classList.remove('mb-toast-visible'); }, 3500);
+        }
+
+        function applyPendingReward() {
+            if (!currentEmail) return;
+            let raw;
+            try { raw = localStorage.getItem(REWARD_KEY); } catch (e) { return; }
+            if (!raw) return;
+            localStorage.removeItem(REWARD_KEY);
+            try {
+                const reward = JSON.parse(raw);
+                const coins = Number(reward.coins) || 0;
+                if (coins > 0) {
+                    userCoins += coins;
+                    saveProgress();
+                    updateUI();
+                    showToast(`🎉 +${coins} monedas por completar ${reward.game || 'el juego'}`);
+                }
+            } catch (e) { /* recompensa corrupta, se ignora */ }
+        }
+
+        function todayStr() {
+            return new Date().toISOString().slice(0, 10);
+        }
+
+        function computeStreak(lastLogin, prevStreak, today) {
+            if (!lastLogin) return 1;
+            if (lastLogin === today) return prevStreak || 1;
+            const last = new Date(lastLogin);
+            const now = new Date(today);
+            const diffDays = Math.round((now - last) / (1000 * 60 * 60 * 24));
+            if (diffDays === 1) return (prevStreak || 0) + 1;
+            return 1;
+        }
+
+        function toggleAvatarPicker() {
+            const grid = document.getElementById('avatar-grid');
+            if (!grid.classList.contains('open')) {
+                grid.innerHTML = '';
+                AVATARS.forEach(a => {
+                    const opt = document.createElement('div');
+                    opt.className = 'avatar-option' + (a === userAvatar ? ' selected' : '');
+                    opt.innerText = a;
+                    opt.onclick = () => selectAvatar(a);
+                    grid.appendChild(opt);
+                });
+            }
+            grid.classList.toggle('open');
+        }
+
+        function selectAvatar(a) {
+            userAvatar = a;
+            document.querySelectorAll('.avatar-option').forEach(el => {
+                el.classList.toggle('selected', el.innerText === a);
+            });
+            updateProfileUI();
+            saveProgress();
+        }
+
+        function updateProfileName() {
+            const input = document.getElementById('profile-name-input');
+            const newName = input.value.trim();
+            if (!newName) return;
+            userName = newName;
+            input.value = '';
+            document.getElementById('display-name').innerText = userName;
+            document.getElementById('welcome-name').innerText = userName.toUpperCase();
+            updateProfileUI();
+            saveProgress();
+        }
+
+        function updateProfileUI() {
+            const avatarBox = document.getElementById('header-avatar-box');
+            const avatarDisplay = document.getElementById('profile-avatar-display');
+            if (avatarBox) avatarBox.innerText = userAvatar || DEFAULT_AVATAR;
+            if (avatarDisplay) avatarDisplay.innerText = userAvatar || DEFAULT_AVATAR;
+
+            const nameDisplay = document.getElementById('profile-name-display');
+            if (nameDisplay) nameDisplay.innerText = userName;
+
+            let l = "Bronce";
+            if (userCoins >= 150) l = "Oro";
+            else if (userCoins >= 100) l = "Plata";
+            const leagueDisplay = document.getElementById('profile-league-display');
+            if (leagueDisplay) leagueDisplay.innerText = `LIGA ${l.toUpperCase()}`;
+
+            const streakEl = document.getElementById('streak-count');
+            if (streakEl) streakEl.innerText = userStreak || 0;
+
+            const statCoins = document.getElementById('stat-coins');
+            if (statCoins) statCoins.innerText = userCoins;
+
+            const lessonsDone = Object.keys(quizData).filter(v => v !== 'v9' && quizData[v].every(q => q.shown)).length;
+            const statLessons = document.getElementById('stat-lessons');
+            if (statLessons) statLessons.innerText = `${lessonsDone}/8`;
+
+            const accuracy = totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : 0;
+            const statAccuracy = document.getElementById('stat-accuracy');
+            if (statAccuracy) statAccuracy.innerText = `${accuracy}%`;
+
+            const statLeague = document.getElementById('stat-league');
+            if (statLeague) statLeague.innerText = l;
+        }
+
+        function emptyProgress() {
+            const p = {};
+            Object.keys(quizData).forEach(v => { p[v] = quizData[v].map(() => false); });
+            p.unlocked = ['card-l1'];
+            return p;
+        }
+
+        function restoreProgress(progress) {
+            if (!progress) return;
+            Object.keys(quizData).forEach(v => {
+                if (progress[v]) {
+                    quizData[v].forEach((q, i) => { q.shown = !!progress[v][i]; });
+                }
+            });
+            if (progress.unlocked) {
+                progress.unlocked.forEach(id => {
+                    if (lockMap[id]) unlockLesson(id, lockMap[id]);
+                });
+            }
+        }
+
+        function saveProgress() {
+            if (!currentEmail) return;
+            const users = loadUsers();
+            const record = users[currentEmail] || { name: userName, password: '', coins: 0, progress: emptyProgress() };
+            record.name = userName;
+            record.coins = userCoins;
+            record.avatar = userAvatar;
+            record.streak = userStreak;
+            record.lastLogin = record.lastLogin || todayStr();
+            record.totalAttempts = totalAttempts;
+            record.totalCorrect = totalCorrect;
+            record.progress = record.progress || emptyProgress();
+            Object.keys(quizData).forEach(v => { record.progress[v] = quizData[v].map(q => q.shown); });
+            const unlockedIds = ['card-l1'];
+            Object.keys(lockMap).forEach(id => {
+                const el = document.getElementById(id);
+                if (el && !el.classList.contains('locked-card')) unlockedIds.push(id);
+            });
+            record.progress.unlocked = unlockedIds;
+            users[currentEmail] = record;
+            saveUsers(users);
+        }
+
+        function handleLogin() {
+            const errEl = document.getElementById('login-error');
+            errEl.innerText = '';
+
+            const name = document.getElementById('username-input').value.trim();
+            const email = document.getElementById('email-input').value.trim().toLowerCase();
+            const pass = document.getElementById('password-input').value;
+
+            if (!name || !email || !pass) {
+                errEl.innerText = 'Completa nombre, correo y contraseña.';
+                return;
+            }
+            if (!email.includes('@')) {
+                errEl.innerText = 'Ingresa un correo válido.';
+                return;
+            }
+
+            const users = loadUsers();
+            const existing = users[email];
+            const today = todayStr();
+
+            if (existing) {
+                if (existing.password !== pass) {
+                    errEl.innerText = 'Contraseña incorrecta para este correo.';
+                    return;
+                }
+                userName = existing.name || name;
+                userCoins = existing.coins || 0;
+                userAvatar = existing.avatar || DEFAULT_AVATAR;
+                totalAttempts = existing.totalAttempts || 0;
+                totalCorrect = existing.totalCorrect || 0;
+                userStreak = computeStreak(existing.lastLogin, existing.streak || 0, today);
+                existing.lastLogin = today;
+                existing.streak = userStreak;
+                users[email] = existing;
+                saveUsers(users);
+                restoreProgress(existing.progress);
+            } else {
+                userName = name;
+                userCoins = 0;
+                userAvatar = DEFAULT_AVATAR;
+                userStreak = 1;
+                totalAttempts = 0;
+                totalCorrect = 0;
+                users[email] = { name, password: pass, coins: 0, avatar: DEFAULT_AVATAR, streak: 1, lastLogin: today, totalAttempts: 0, totalCorrect: 0, progress: emptyProgress() };
+                if (!saveUsers(users)) {
+                    errEl.innerText = 'Tu navegador está bloqueando el guardado local (localStorage). Prueba en otro navegador o desactiva el modo privado.';
+                    return;
+                }
+            }
+
+            currentEmail = email;
+            try { localStorage.setItem(SESSION_KEY, email); } catch (e) {}
+            document.getElementById('display-name').innerText = userName;
+            document.getElementById('welcome-name').innerText = userName.toUpperCase();
+            document.getElementById('login-screen').classList.add('hidden');
+            updateUI();
+            renderRanking();
+            applyPendingReward();
+            applyHashTab();
+        }
+
+        function confirmDeleteAccount() {
+            document.getElementById('delete-confirm-input').value = '';
+            document.getElementById('delete-confirm-error').innerText = '';
+            document.getElementById('delete-confirm-screen').style.display = 'flex';
+        }
+
+        function cancelDeleteAccount() {
+            document.getElementById('delete-confirm-screen').style.display = 'none';
+        }
+
+        function deleteAccount() {
+            const val = document.getElementById('delete-confirm-input').value.trim().toUpperCase();
+            const errEl = document.getElementById('delete-confirm-error');
+            if (val !== 'ELIMINAR') {
+                errEl.innerText = 'Escribe ELIMINAR para confirmar.';
+                return;
+            }
+            if (!currentEmail) {
+                cancelDeleteAccount();
+                return;
+            }
+            const users = loadUsers();
+            delete users[currentEmail];
+            saveUsers(users);
+            cancelDeleteAccount();
+            handleLogout();
+        }
+
+        function handleLogout() {
+            try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+            currentEmail = null;
+            userName = "Usuario";
+            userCoins = 0;
+            userAvatar = DEFAULT_AVATAR;
+            userStreak = 0;
+            totalAttempts = 0;
+            totalCorrect = 0;
+            Object.keys(quizData).forEach(v => quizData[v].forEach(q => q.shown = false));
+            Object.keys(lockMap).forEach(id => {
+                const el = document.getElementById(id);
+                const lock = document.getElementById(lockMap[id]);
+                if (el) el.classList.add('locked-card');
+                if (lock) lock.style.display = 'flex';
+            });
+            document.getElementById('username-input').value = '';
+            document.getElementById('email-input').value = '';
+            document.getElementById('password-input').value = '';
+            document.getElementById('login-error').innerText = '';
+            document.getElementById('login-screen').classList.remove('hidden');
+            updateUI();
+        }
+
+function unlockLesson(cardId, lockId){
+    document.getElementById(cardId)
+    .classList.remove('locked-card');
+    document.getElementById(lockId)
+    .style.display = 'none';
+}
+
+function checkUnlocks(){
+
+    if(quizData.v1.every(q => q.shown)){
+        unlockLesson('card-l2', 'lock-msg-2');
+    }
+    if(quizData.v2.every(q => q.shown)){
+        unlockLesson('card-l3', 'lock-msg-3');
+    }
+    if(quizData.v3.every(q => q.shown)){
+        unlockLesson('card-l4', 'lock-msg-4');
+    }
+    if(quizData.v4.every(q => q.shown)){
+        unlockLesson('card-l5', 'lock-msg-5');
+    }
+    if(quizData.v5.every(q => q.shown)){
+        unlockLesson('card-l6', 'lock-msg-6');
+    }
+    if(quizData.v6.every(q => q.shown)){
+        unlockLesson('card-l7', 'lock-msg-7');
+    }
+    if(quizData.v7.every(q => q.shown)){
+        unlockLesson('card-l8', 'lock-msg-8');
+    }
+    if(quizData.v8.every(q => q.shown)){
+        unlockLesson('card-l9', 'lock-msg-9');
+    }
+
+}
+
+        function wireVideoQuiz(id) {
+            const video = document.getElementById(id);
+            if (!video) return; // este video no existe en la página (ej: v9 sin Lección 9 aún) -> se omite sin romper el script
+            video.addEventListener('timeupdate', () => checkQuiz(
+                video,
+                quizData[id],
+                document.getElementById(`quiz-${id.slice(1)}`),
+                document.getElementById(`q-text-${id.slice(1)}`),
+                document.getElementById(`opt-${id.slice(1)}`)
+            ));
+        }
+        ['v1','v2','v3','v4','v5','v6','v7','v8','v9'].forEach(wireVideoQuiz);
+
+        function updateUI() {
+            document.getElementById('coin-count').innerText = `🪙 ${userCoins}`;
+            const progress = Math.round((quizzesPassed / 4) * 100);
+            document.getElementById('main-progress').style.width = `${progress}%`;
+            document.getElementById('progress-text').innerText = `${progress}% completado`;
+            updateLeague(); renderRanking(); updateProfileUI();
+        }
+
+        function updateLeague() {
+            let l = "Bronce", c = "bronze";
+            if(userCoins >= 150) { l = "Oro"; c = "gold"; }
+            else if(userCoins >= 100) { l = "Plata"; c = "silver"; }
+            const b = document.getElementById('league-badge-main');
+            b.innerText = `Liga ${l}`; b.className = `league-badge ${c}`;
+            document.getElementById('league-text').innerText = l;
+            document.getElementById('league-text').style.color = `var(--${c})`;
+        }
+
+        function renderRanking() {
+            const list = document.getElementById('global-rank-list'); list.innerHTML = '';
+            const all = [{name: userName, coins: userCoins, isMe: true}, {name: "Julian Velandia", coins: 500}, {name: "Adam Barrera", coins: 350}].sort((a,b) => b.coins - a.coins);
+            all.forEach((u, i) => {
+                const item = document.createElement('div'); item.className = `rank-item ${u.isMe ? 'me' : ''}`;
+                item.innerHTML = `<span>#${i+1} ${u.name}</span><span>🪙 ${u.coins}</span>`;
+                list.appendChild(item);
+            });
+        }
+        function tryAutoLogin() {
+            let savedEmail;
+            try { savedEmail = localStorage.getItem(SESSION_KEY); } catch (e) { return; }
+            if (!savedEmail) return;
+
+            const users = loadUsers();
+            const existing = users[savedEmail];
+            if (!existing) {
+                try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+                return;
+            }
+
+            const today = todayStr();
+            userName = existing.name || 'Usuario';
+            userCoins = existing.coins || 0;
+            userAvatar = existing.avatar || DEFAULT_AVATAR;
+            totalAttempts = existing.totalAttempts || 0;
+            totalCorrect = existing.totalCorrect || 0;
+            userStreak = computeStreak(existing.lastLogin, existing.streak || 0, today);
+            existing.lastLogin = today;
+            existing.streak = userStreak;
+            users[savedEmail] = existing;
+            saveUsers(users);
+            restoreProgress(existing.progress);
+
+            currentEmail = savedEmail;
+            document.getElementById('display-name').innerText = userName;
+            document.getElementById('welcome-name').innerText = userName.toUpperCase();
+            document.getElementById('login-screen').classList.add('hidden');
+            updateUI();
+            renderRanking();
+            applyPendingReward();
+        }
+
+        function applyHashTab() {
+            const hash = (window.location.hash || '').replace('#', '');
+            const tabMap = { home: 'tab-home', videos: 'tab-videos', games: 'tab-games', trophy: 'tab-trophy', profile: 'tab-profile' };
+            const tabId = tabMap[hash];
+            if (!tabId) return;
+            const radio = document.getElementById(tabId);
+            if (radio) radio.checked = true;
+        }
+
+        tryAutoLogin();
+        applyHashTab();
+    </script>
+</body>
+</html>
