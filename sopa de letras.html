@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sopa de Letras</title>
+    <style>
+        :root {
+            --accent: #10b981;
+            --bg: #09090b;
+            --card: #18181b;
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text: #ffffff;
+            --muted: #71717a;
+            --selection: rgba(16, 185, 129, 0.3);
+            --danger: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        header {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            border: 1px solid var(--card-border);
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            font-size: 1rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .word-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            max-width: 400px;
+            margin-bottom: 20px;
+            background: var(--card);
+            padding: 12px;
+            border-radius: 12px;
+        }
+
+        .word-item {
+            font-size: 0.7rem;
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.05);
+            color: var(--muted);
+            border: 1px solid transparent;
+        }
+
+        .word-item.found {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent);
+            border-color: var(--accent);
+            text-decoration: line-through;
+        }
+
+        #grid-container {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 2px;
+            background: #27272a;
+            padding: 4px;
+            border-radius: 8px;
+            touch-action: none;
+            width: 100%;
+            max-width: 380px;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .cell.highlight {
+            background: var(--selection);
+        }
+
+        .cell.found {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        .controls {
+            margin-top: 24px;
+            text-align: center;
+            width: 100%;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            max-width: 200px;
+        }
+
+        #msg {
+            margin-top: 15px;
+            font-weight: bold;
+            color: var(--accent);
+            height: 20px;
+        }
+
+        #reward-toast {
+            position: fixed;
+            top: 16px;
+            left: 50%;
+            z-index: 999;
+            background: var(--accent);
+            color: var(--bg);
+            font-weight: 800;
+            padding: 12px 20px;
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(16,185,129,0.4);
+            opacity: 0;
+            transform: translateX(-50%) translateY(-100px);
+            transition: all 0.4s ease;
+            text-align: center;
+            max-width: 90%;
+        }
+        #reward-toast.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+<div id="reward-toast"></div>
+
+<header>
+    <a href="monetary-budget (1).html#games" class="back-btn" id="back-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        Regresar
+    </a>
+    <h1>Sopa de Letras</h1>
+</header>
+
+<div class="word-list" id="word-list"></div>
+
+<div id="grid-container"></div>
+
+<div class="controls">
+    <div id="msg"></div>
+    <br>
+    <button class="btn" onclick="initGame()">Reiniciar</button>
+</div>
+
+<script>
+    const WORDS = ["AHORRO", "CREDITO", "DEUDA", "HUEVOS", "INTERES", "INFLACION", "DINERO", "BANCO"];
+    const SIZE = 10;
+    const REWARD_KEY = 'mb_pending_reward';
+    const REWARD_COINS = 50;
+    const GAME_NAME = 'Sopa de letras';
+
+    let grid = [];
+    let isSelecting = false;
+    let selectedCells = [];
+    let foundWords = [];
+    let rewardGiven = false;
+
+    function initGame() {
+        grid = Array(SIZE).fill().map(() => Array(SIZE).fill(''));
+        foundWords = [];
+        selectedCells = [];
+        rewardGiven = false;
+        document.getElementById('msg').textContent = "";
+        
+        WORDS.forEach(word => placeWord(word));
+        
+        const chars = "ABCDEFGHIJKLMOPQRSTUV";
+        for(let r=0; r<SIZE; r++) {
+            for(let c=0; c<SIZE; c++) {
+                if(grid[r][c] === '') grid[r][c] = chars[Math.floor(Math.random()*chars.length)];
+            }
+        }
+        render();
+    }
+
+    function placeWord(word) {
+        const directions = [[0, 1], [1, 0], [1, 1], [0, -1], [-1, 0], [1, -1], [-1, 1], [-1, -1]];
+        let placed = false;
+        let attempts = 0;
+        while (!placed && attempts < 100) {
+            const dir = directions[Math.floor(Math.random() * directions.length)];
+            const r = Math.floor(Math.random() * SIZE);
+            const c = Math.floor(Math.random() * SIZE);
+            if (canPlace(word, r, c, dir)) {
+                for (let i = 0; i < word.length; i++) {
+                    grid[r + i * dir[0]][c + i * dir[1]] = word[i];
+                }
+                placed = true;
+            }
+            attempts++;
+        }
+    }
+
+    function canPlace(word, r, c, dir) {
+        for (let i = 0; i < word.length; i++) {
+            const nr = r + i * dir[0];
+            const nc = c + i * dir[1];
+            if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) return false;
+            if (grid[nr][nc] !== '' && grid[nr][nc] !== word[i]) return false;
+        }
+        return true;
+    }
+
+    function render() {
+        const container = document.getElementById('grid-container');
+        container.innerHTML = '';
+        for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.textContent = grid[r][c];
+                cell.dataset.r = r;
+                cell.dataset.c = c;
+                cell.onmousedown = () => handleStart(r, c);
+                cell.onmouseenter = () => handleMove(r, c);
+                cell.ontouchstart = (e) => { e.preventDefault(); handleStart(r, c); };
+                container.appendChild(cell);
+            }
+        }
+        window.onmouseup = handleEnd;
+        window.ontouchend = handleEnd;
+        const list = document.getElementById('word-list');
+        list.innerHTML = WORDS.map(w => `<span class="word-item" id="w-${w}">${w}</span>`).join('');
+    }
+
+    function handleStart(r, c) {
+        isSelecting = true;
+        selectedCells = [{r, c}];
+        updateHighlights();
+    }
+
+    function handleMove(r, c) {
+        if (!isSelecting) return;
+        const last = selectedCells[selectedCells.length - 1];
+        if (last.r !== r || last.c !== c) {
+            selectedCells.push({r, c});
+            updateHighlights();
+        }
+    }
+
+    document.addEventListener('touchmove', (e) => {
+        if (!isSelecting) return;
+        const touch = e.touches[0];
+        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (el && el.classList.contains('cell')) {
+            handleMove(parseInt(el.dataset.r), parseInt(el.dataset.c));
+        }
+    }, { passive: false });
+
+    function updateHighlights() {
+        document.querySelectorAll('.cell').forEach(el => el.classList.remove('highlight'));
+        selectedCells.forEach(pos => {
+            const el = document.querySelector(`.cell[data-r="${pos.r}"][data-c="${pos.c}"]`);
+            if (el) el.classList.add('highlight');
+        });
+    }
+
+    function handleEnd() {
+        if (!isSelecting) return;
+        isSelecting = false;
+        const currentWord = selectedCells.map(p => grid[p.r][p.c]).join('');
+        const reversedWord = currentWord.split('').reverse().join('');
+        WORDS.forEach(w => {
+            if ((currentWord === w || reversedWord === w) && !foundWords.includes(w)) {
+                foundWords.push(w);
+                markAsFound(w, selectedCells);
+            }
+        });
+        selectedCells = [];
+        updateHighlights();
+        if (foundWords.length === WORDS.length) {
+            document.getElementById('msg').textContent = "¡COMPLETADO!";
+            grantRewardOnce();
+        }
+    }
+
+    function markAsFound(word, cells) {
+        cells.forEach(p => {
+            const el = document.querySelector(`.cell[data-r="${p.r}"][data-c="${p.c}"]`);
+            if(el) el.classList.add('found');
+        });
+        document.getElementById(`w-${word}`).classList.add('found');
+    }
+
+    // --- Recompensa de monedas al completar el juego ---
+    // Se guarda una "recompensa pendiente" en localStorage; la pagina principal
+    // la detecta al volver (con la sesion ya activa) y suma las monedas sin
+    // pedir login de nuevo.
+    function grantRewardOnce() {
+        if (rewardGiven) return;
+        rewardGiven = true;
+        try {
+            localStorage.setItem(REWARD_KEY, JSON.stringify({
+                coins: REWARD_COINS,
+                game: GAME_NAME,
+                ts: Date.now()
+            }));
+        } catch (e) { /* localStorage no disponible */ }
+        showRewardToast(`🎉 ¡Ganaste ${REWARD_COINS} monedas! Se sumarán al volver al inicio.`);
+    }
+
+    function showRewardToast(text) {
+        const toast = document.getElementById('reward-toast');
+        toast.textContent = text;
+        toast.classList.add('visible');
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => toast.classList.remove('visible'), 4000);
+    }
+
+    window.onload = initGame;
+</script>
+</body>
+</html>
